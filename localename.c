@@ -1365,7 +1365,9 @@ _nl_locale_name_default (void)
 	switch (sub)
 	  {
 	  case SUBLANG_ROMANIAN_ROMANIA: return "ro_RO";
+#if SUBLANG_ROMANIAN_MOLDOVA != SUBLANG_ROMANIAN_ROMANIA
 	  case SUBLANG_ROMANIAN_MOLDOVA: return "ro_MD";
+#endif
 	  }
 	return "ro";
       case LANG_RUSSIAN:
