@@ -20,14 +20,22 @@
 #define _LIBINTL_H	1
 
 #ifdef LIBINTL_STATIC
-#define LIBINTL_DLL_EXPORTED
-#else /* LIBINTL_STATIC */
-#ifdef BUILDING_LIBINTL
-#define LIBINTL_DLL_EXPORTED __declspec(dllexport)
+# define LIBINTL_DLL_EXPORTED
 #else
-#define LIBINTL_DLL_EXPORTED __declspec(dllimport)
+# if defined _WIN32 || defined __WIN32__ || defined __CYGWIN__
+#  ifdef BUILDING_LIBINTL
+#   define LIBINTL_DLL_EXPORTED __declspec(dllexport)
+#  else
+#   define LIBINTL_DLL_EXPORTED __declspec(dllimport)
+#  endif
+# else
+#  if __GNUC__ >= 4
+#   define LIBINTL_DLL_EXPORTED __attribute__ ((__visibility__ ("default")))
+#  else
+#   define LIBINTL_DLL_EXPORTED
+#  endif
+# endif
 #endif
-#endif /* LIBINTL_STATIC */ 
 
 #include <locale.h>
 
