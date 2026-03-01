@@ -6,6 +6,7 @@ include(GNUInstallDirs)
 include(CheckIncludeFile)
 include(CheckSymbolExists)
 include(CheckFunctionExists)
+include(CheckCSourceCompiles)
 
 option(LIBINTL_WITH_ICONV "Link with iconv/libiconv if available" ON)
 
@@ -25,6 +26,8 @@ check_symbol_exists(_snwprintf "wchar.h" HAVE_DECL__SNWPRINTF)
 
 check_function_exists(setlocale HAVE_SETLOCALE)
 check_function_exists(mmap HAVE_MMAP)
+check_function_exists(stpcpy HAVE_STPCPY)
+check_function_exists(mempcpy HAVE_MEMPCPY)
 
 set(HAVE_POSIX_PRINTF 0)
 set(HAVE_ASPRINTF 0)
@@ -45,6 +48,7 @@ else()
 endif()
 
 set(HAVE_ICONV 0)
+set(ICONV_CONST "")
 set(DEPENDS_ON_LIBICONV 0)
 set(_intl_iconv_include_dirs "")
 set(_intl_iconv_libraries "")
@@ -73,6 +77,24 @@ if(LIBINTL_WITH_ICONV)
       list(APPEND _intl_iconv_include_dirs ${ICONV_INCLUDE_DIR})
       list(APPEND _intl_iconv_libraries ${ICONV_LIBRARY})
     endif()
+  endif()
+
+  if(HAVE_ICONV)
+    set(_old_CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES})
+    set(_old_CMAKE_REQUIRED_INCLUDES ${CMAKE_REQUIRED_INCLUDES})
+    set(CMAKE_REQUIRED_LIBRARIES ${_intl_iconv_libraries})
+    set(CMAKE_REQUIRED_INCLUDES ${_intl_iconv_include_dirs})
+    check_c_source_compiles("
+      #include <iconv.h>
+      int main() {
+        size_t (*f) (iconv_t, const char **, size_t *, char **, size_t *) = iconv;
+        return 0;
+      }" ICONV_SECOND_ARG_IS_CONST)
+    if(ICONV_SECOND_ARG_IS_CONST)
+      set(ICONV_CONST "const")
+    endif()
+    set(CMAKE_REQUIRED_LIBRARIES ${_old_CMAKE_REQUIRED_LIBRARIES})
+    set(CMAKE_REQUIRED_INCLUDES ${_old_CMAKE_REQUIRED_INCLUDES})
   endif()
 endif()
 
@@ -103,6 +125,9 @@ file(APPEND "${_config_h_in}" "#cmakedefine HAVE_DECL__SNPRINTF 1\n")
 file(APPEND "${_config_h_in}" "#cmakedefine HAVE_DECL__SNWPRINTF 1\n")
 file(APPEND "${_config_h_in}" "#cmakedefine HAVE_SETLOCALE 1\n")
 file(APPEND "${_config_h_in}" "#cmakedefine HAVE_MMAP 1\n")
+file(APPEND "${_config_h_in}" "#cmakedefine HAVE_STPCPY 1\n")
+file(APPEND "${_config_h_in}" "#cmakedefine HAVE_MEMPCPY 1\n")
+file(APPEND "${_config_h_in}" "#define ICONV_CONST @ICONV_CONST@\n")
 file(APPEND "${_config_h_in}" "#define HAVE_SNPRINTF ${HAVE_SNPRINTF}\n")
 file(APPEND "${_config_h_in}" "#define HAVE_FWPRINTF ${HAVE_FWPRINTF}\n")
 file(APPEND "${_config_h_in}" "#define HAVE_ICONV ${HAVE_ICONV}\n")
@@ -114,7 +139,7 @@ file(WRITE "${_relocate_h}" "#ifndef _RELOCATE_H\n#define _RELOCATE_H\n\n#ifdef 
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/libgnuintl.h.in" "${CMAKE_CURRENT_BINARY_DIR}/libgnuintl.h" COPYONLY)
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/libgnuintl.h.in" "${CMAKE_CURRENT_BINARY_DIR}/libintl.h" COPYONLY)
 
-add_library(intl SHARED
+add_library(intl
   bindtextdom.c
   dcgettext.c
   dgettext.c
@@ -179,10 +204,17 @@ target_compile_definitions(intl
     LOCALE_ALIAS_PATH=""
     INSTALLDIR="${_intl_installdir}"
     INSTALLPREFIX="${CMAKE_INSTALL_PREFIX}"
+    LIBDIR="${CMAKE_INSTALL_FULL_LIBDIR}"
 )
 
-if(MSVC)
-  target_compile_definitions(intl PRIVATE BUILDING_LIBINTL BUILDING_DLL)
+target_compile_definitions(intl PRIVATE BUILDING_LIBINTL)
+
+if(BUILD_SHARED_LIBS)
+  if(MSVC)
+    target_compile_definitions(intl PRIVATE BUILDING_DLL)
+  endif()
+else()
+  target_compile_definitions(intl PUBLIC LIBINTL_STATIC)
 endif()
 
 if(WIN32)
@@ -200,3 +232,8 @@ install(TARGETS intl
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/libintl.h"
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
+
+if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
+  add_executable(test_libintl test_libintl.c)
+  target_link_libraries(test_libintl PRIVATE intl)
+endif()

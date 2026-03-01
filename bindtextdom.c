@@ -24,6 +24,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef HAVE_UNISTD_H
+# include <unistd.h>
+#endif
+
 #ifdef _LIBC
 # include <libintl.h>
 #else
