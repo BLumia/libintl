@@ -9,6 +9,8 @@ include(CheckFunctionExists)
 include(CheckCSourceCompiles)
 
 option(LIBINTL_WITH_ICONV "Link with iconv/libiconv if available" ON)
+option(BUILD_SHARED_LIBS "Build shared libraries" ON)
+option(BUILD_TESTING "Build tests" ON)
 
 check_include_file("stddef.h" HAVE_STDDEF_H)
 check_include_file("stdlib.h" HAVE_STDLIB_H)
@@ -233,7 +235,7 @@ install(FILES "${CMAKE_CURRENT_BINARY_DIR}/libintl.h"
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
-if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
-  add_executable(test_libintl test_libintl.c)
-  target_link_libraries(test_libintl PRIVATE intl)
+if(BUILD_TESTING)
+  enable_testing()
+  add_subdirectory(tests)
 endif()

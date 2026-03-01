@@ -1,0 +1,5 @@
+if(BUILD_TESTING)
+  add_executable(test_libintl test_libintl.c)
+  target_link_libraries(test_libintl PRIVATE intl)
+  add_test(NAME test_libintl COMMAND test_libintl)
+endif()
