@@ -25,6 +25,4 @@ jobs:
 
     - name: Run Test
       working-directory: build
-      run: |
-        ctest --output-on-failure -C Release || true
-        ./Release/test_libintl.exe || ./test_libintl || echo "Test execution failed or not applicable"
+      run: ctest --verbose -C Release
