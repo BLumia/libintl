@@ -49,7 +49,7 @@
 /* When building a DLL, we must export some functions.  Note that because
    the functions are only defined for binary backward compatibility, we
    don't need to use __declspec(dllimport) in any case.  */
-#if defined _MSC_VER && BUILDING_DLL
+#if (defined _WIN32 || defined __WIN32__ || defined __CYGWIN__) && BUILDING_DLL
 # define DLL_EXPORTED __declspec(dllexport)
 #else
 # define DLL_EXPORTED
