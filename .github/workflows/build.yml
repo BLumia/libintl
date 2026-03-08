@@ -26,3 +26,27 @@ jobs:
     - name: Run Test
       working-directory: build
       run: ctest --verbose -C Release
+
+  mingw-build:
+    strategy:
+      matrix:
+        shared: [ON, OFF]
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install Qt for MinGW
+      uses: jurplel/install-qt-action@v4
+      with:
+        version: '6.8.3'
+        arch: 'win64_mingw'
+
+    - name: Configure CMake
+      run: cmake -G "MinGW Makefiles" -B build -DBUILD_SHARED_LIBS=${{ matrix.shared }} -DBUILD_TESTING=ON -DCMAKE_BUILD_TYPE=Release
+
+    - name: Build
+      run: cmake --build build
+
+    - name: Run Test
+      run: ctest --test-dir build --verbose

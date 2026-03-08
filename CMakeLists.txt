@@ -212,7 +212,7 @@ target_compile_definitions(intl
 target_compile_definitions(intl PRIVATE BUILDING_LIBINTL)
 
 if(BUILD_SHARED_LIBS)
-  if(MSVC)
+  if(WIN32 OR CYGWIN)
     target_compile_definitions(intl PRIVATE BUILDING_DLL)
   endif()
 else()
