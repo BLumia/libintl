@@ -34,6 +34,42 @@ check_function_exists(mempcpy HAVE_MEMPCPY)
 check_function_exists(getcwd HAVE_GETCWD)
 check_function_exists(_getcwd HAVE__GETCWD)
 
+check_symbol_exists(LC_MESSAGES "locale.h" HAVE_LC_MESSAGES)
+
+if(APPLE)
+  set(CMAKE_REQUIRED_FLAGS "-framework CoreFoundation")
+  check_c_source_compiles("
+    #include <CoreFoundation/CFLocale.h>
+    int main() {
+      CFLocaleRef locale = CFLocaleCopyCurrent();
+      CFLocaleGetIdentifier(locale);
+      CFRelease(locale);
+      return 0;
+    }" HAVE_CFLOCALECOPYCURRENT)
+  check_c_source_compiles("
+    #include <CoreFoundation/CFPreferences.h>
+    #include <CoreFoundation/CFString.h>
+    int main() {
+      CFTypeRef value = CFPreferencesCopyAppValue(CFSTR(\"AppleLocale\"),
+        kCFPreferencesCurrentApplication);
+      return 0;
+    }" HAVE_CFPREFERENCESCOPYAPPVALUE)
+  set(CMAKE_REQUIRED_FLAGS "")
+  find_library(COREFOUNDATION_LIBRARY CoreFoundation)
+  if(COREFOUNDATION_LIBRARY)
+    list(APPEND _intl_localedir_extra_libraries ${COREFOUNDATION_LIBRARY})
+  endif()
+endif()
+
+if(NOT APPLE)
+  check_c_source_compiles("
+    #include <locale.h>
+    int main() {
+      char *result = setlocale(LC_ALL, (void *)0);
+      return 0;
+    }" HAVE_LOCALE_NULL)
+endif()
+
 set(HAVE_POSIX_PRINTF 0)
 set(HAVE_ASPRINTF 0)
 set(HAVE_WCHAR_T 1)
@@ -139,6 +175,10 @@ file(APPEND "${_config_h_in}" "#define ICONV_CONST @ICONV_CONST@\n")
 file(APPEND "${_config_h_in}" "#define HAVE_SNPRINTF ${HAVE_SNPRINTF}\n")
 file(APPEND "${_config_h_in}" "#define HAVE_FWPRINTF ${HAVE_FWPRINTF}\n")
 file(APPEND "${_config_h_in}" "#define HAVE_ICONV ${HAVE_ICONV}\n")
+file(APPEND "${_config_h_in}" "#cmakedefine HAVE_LC_MESSAGES 1\n")
+file(APPEND "${_config_h_in}" "#cmakedefine HAVE_LOCALE_NULL 1\n")
+file(APPEND "${_config_h_in}" "#cmakedefine HAVE_CFLOCALECOPYCURRENT 1\n")
+file(APPEND "${_config_h_in}" "#cmakedefine HAVE_CFPREFERENCESCOPYAPPVALUE 1\n")
 configure_file("${_config_h_in}" "${CMAKE_CURRENT_BINARY_DIR}/config.h" @ONLY)
 
 set(_relocate_h "${CMAKE_CURRENT_BINARY_DIR}/relocate.h")
@@ -235,6 +275,14 @@ if(WIN32)
 endif()
 
 target_link_libraries(intl PRIVATE ${_intl_iconv_libraries})
+
+if(APPLE)
+  find_library(COREFOUNDATION_LIBRARY CoreFoundation)
+  if(COREFOUNDATION_LIBRARY)
+    target_link_libraries(intl PRIVATE ${COREFOUNDATION_LIBRARY})
+    target_include_directories(intl PRIVATE "${COREFOUNDATION_LIBRARY}/Headers")
+  endif()
+endif()
 
 install(TARGETS intl
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
